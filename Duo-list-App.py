@@ -18,13 +18,35 @@ def load_data():
     try:
         response = requests.get(f"{BASE_URL}/latest", headers=headers)
         data = response.json()
-        # JSONBin v3 puts the actual data inside 'record'
+        
+        # debug: print data structure if needed (hidden in cloud logs)
+        # print(data) 
+
+        # JSONBin v3 puts data in 'record'. If missing, default to empty list.
         records = data.get("record", [])
-        if not records:
-            return pd.DataFrame(columns=["Category", "Activity", "Filter_1", "Filter_2", "Status"])
-        return pd.DataFrame(records)
+        
+        # Safety Check: If records is a dictionary (e.g. {"message": "Unauthorized"}), make it a list
+        if isinstance(records, dict):
+            # If it's an error message or empty dict, treat as empty list
+            records = [] 
+
+        # Create DataFrame
+        df = pd.DataFrame(records)
+        
+        # FORCE columns to exist. If they are missing, add them.
+        expected_cols = ["Category", "Activity", "Filter_1", "Filter_2", "Status"]
+        for col in expected_cols:
+            if col not in df.columns:
+                df[col] = "" # Fill missing columns with empty strings
+                
+        # Drop rows where 'Category' is empty/NaN (cleans up bad data)
+        df = df[df["Category"].astype(bool)] 
+        
+        return df
+
     except Exception as e:
         st.error(f"Error loading data: {e}")
+        # Return an empty dataframe with correct columns so the app doesn't crash
         return pd.DataFrame(columns=["Category", "Activity", "Filter_1", "Filter_2", "Status"])
 
 def save_data(df):
@@ -120,4 +142,5 @@ with tab2:
 with tab3:
     render_tab("Date Night", "Effort", "Cost")
 with tab4:
+
     render_tab("Challenge", "Effort", "Cost")
