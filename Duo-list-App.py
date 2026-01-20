@@ -4,7 +4,6 @@ import requests
 import json
 
 # --- CONFIGURATION ---
-# We use Streamlit Secrets for security (explained in Phase 4)
 JSONBIN_KEY = st.secrets["JSONBIN_KEY"]
 BIN_ID = st.secrets["BIN_ID"]
 BASE_URL = f"https://api.jsonbin.io/v3/b/{BIN_ID}"
@@ -19,15 +18,11 @@ def load_data():
         response = requests.get(f"{BASE_URL}/latest", headers=headers)
         data = response.json()
         
-        # debug: print data structure if needed (hidden in cloud logs)
-        # print(data) 
-
-        # JSONBin v3 puts data in 'record'. If missing, default to empty list.
+        # JSONBin v3 puts the actual data inside 'record'
         records = data.get("record", [])
         
-        # Safety Check: If records is a dictionary (e.g. {"message": "Unauthorized"}), make it a list
+        # Safety Check: If records is a dictionary (e.g. error message), make it a list
         if isinstance(records, dict):
-            # If it's an error message or empty dict, treat as empty list
             records = [] 
 
         # Create DataFrame
@@ -40,13 +35,14 @@ def load_data():
                 df[col] = "" # Fill missing columns with empty strings
                 
         # Drop rows where 'Category' is empty/NaN (cleans up bad data)
-        df = df[df["Category"].astype(bool)] 
+        # Check if Category column exists and filter, handling case where it might be all empty
+        if "Category" in df.columns:
+            df = df[df["Category"].astype(bool)] 
         
         return df
 
     except Exception as e:
         st.error(f"Error loading data: {e}")
-        # Return an empty dataframe with correct columns so the app doesn't crash
         return pd.DataFrame(columns=["Category", "Activity", "Filter_1", "Filter_2", "Status"])
 
 def save_data(df):
@@ -75,13 +71,18 @@ st.title("🎯 What should we do today?")
 # Sidebar: Add New Items
 with st.sidebar:
     st.header("Add New Activity")
-    new_cat = st.selectbox("Category", ["Vacation", "Gaming", "Date Night", "Challenge"])
+    # ADDED "Movies" to this list so the logic below works
+    new_cat = st.selectbox("Category", ["Vacation", "Gaming", "Date Night", "Challenge", "Movies"])
     new_act = st.text_input("Activity Name")
     
     if new_cat == "Vacation":
         f1_label, f2_label = "Season", "Vibe"
         f1_opts = ["Summer", "Winter", "Spring", "Fall", "Any"]
         f2_opts = ["Relaxing", "Adventure", "City", "Nature"]
+    elif new_cat == "Movies":
+        f1_label, f2_label = "Genre", "Length"
+        f1_opts = ["Action", "Comedy", "Drama", "Horror", "Sci-Fi"]
+        f2_opts = ["Short", "Feature", "Series"]
     elif new_cat == "Gaming":
         f1_label, f2_label = "Genre", "Mode"
         f1_opts = ["RPG", "FPS", "Puzzle", "Sim"]
@@ -107,7 +108,8 @@ with st.sidebar:
 # Load data once at the start
 df = load_data()
 
-tab1, tab2, tab3, tab4 = st.tabs(["✈️ Vacations", "🎮 Gaming", "🍷 Date Nights", "🏆 Challenges"])
+# ADDED "Movies" tab here
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["✈️ Vacations", "🎮 Gaming", "🍷 Date Nights", "🏆 Challenges", "🎬 Movies"])
 
 def render_tab(category_name, filter1_name, filter2_name):
     subset = df[df["Category"] == category_name]
@@ -142,5 +144,6 @@ with tab2:
 with tab3:
     render_tab("Date Night", "Effort", "Cost")
 with tab4:
-
     render_tab("Challenge", "Effort", "Cost")
+with tab5:
+    render_tab("Movies", "Genre", "Length")
