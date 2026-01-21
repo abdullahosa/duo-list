@@ -46,7 +46,7 @@ def load_data():
 
         df = pd.DataFrame(records)
         
-        # FORCE columns to exist (Added 'Link' here so it doesn't break)
+        # FORCE columns to exist
         expected_cols = ["Category", "Activity", "Type", "Vibe", "Status", "Link"]
         for col in expected_cols:
             if col not in df.columns:
@@ -104,7 +104,6 @@ with st.sidebar:
         f2_opts = ["Co-op", "Single", "Versus"]
     elif new_cat == "Date Night":
         f1_label, f2_label = "Type", "Vibe"
-        # FIX: Defined f1_opts/f2_opts correctly (was overwriting labels before)
         f1_opts = ["Stay In", "Going Out"]
         f2_opts = ["Lazy", "Bougie", "Active", "Foodie", "Explorer"]
     else: 
@@ -141,7 +140,7 @@ with st.sidebar:
 # --- MAIN DISPLAY ---
 df = load_data()
 
-# 1. VIEW TOGGLE (Fixed Typo "Porgress")
+# 1. VIEW TOGGLE
 view_option = st.radio("View:", ["Active List", "In Progress", "Completed History"], horizontal=True)
 
 if view_option == "Active List":
@@ -154,7 +153,6 @@ else:
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["✈️ Vacations", "🎮 Gaming", "🍷 Date Nights", "🏆 Challenges", "🎬 Movies", "🛠️ Projects"])
 
 def render_tab(category_name, filter1_name, filter2_name):
-    # Filter by Category AND by Status
     subset = df[(df["Category"] == category_name) & (df["Status"] == target_status)]
     
     if subset.empty:
@@ -169,9 +167,19 @@ def render_tab(category_name, filter1_name, filter2_name):
     # Filters
     col1, col2 = st.columns(2)
     with col1:
-        f1_val = st.multiselect(f"Filter by {filter1_name}", options=subset["Type"].unique())
+        # FIX: Added unique keys to multiselect widgets
+        f1_val = st.multiselect(
+            f"Filter by {filter1_name}", 
+            options=subset["Type"].unique(),
+            key=f"filter1_{category_name}_{target_status}" 
+        )
     with col2:
-        f2_val = st.multiselect(f"Filter by {filter2_name}", options=subset["Vibe"].unique())
+        # FIX: Added unique keys to multiselect widgets
+        f2_val = st.multiselect(
+            f"Filter by {filter2_name}", 
+            options=subset["Vibe"].unique(),
+            key=f"filter2_{category_name}_{target_status}"
+        )
 
     if f1_val:
         subset = subset[subset["Type"].isin(f1_val)]
@@ -185,7 +193,7 @@ def render_tab(category_name, filter1_name, filter2_name):
             options=["To Do", "In Progress", "Completed"],
             required=True,
         ),
-        "Link": st.column_config.LinkColumn("Sheet"), # Shows the link if it exists
+        "Link": st.column_config.LinkColumn("Sheet"),
         "Type": st.column_config.TextColumn(filter1_name),
         "Vibe": st.column_config.TextColumn(filter2_name)
     }
@@ -205,26 +213,8 @@ def render_tab(category_name, filter1_name, filter2_name):
             st.toast("Saved!", icon="✅")
             st.rerun()
 
-    # Random Picker (Only show on Active list)
+    # Random Picker
     if target_status == "To Do":
         if st.button(f"Pick a Random {category_name}", key=f"btn_{category_name}"):
             if not subset.empty:
-                choice = subset.sample(1).iloc[0]
-                st.balloons()
-                msg = f"**You should do:** {choice['Activity']} ({choice['Type']})"
-                if choice['Link']:
-                    msg += f"\n\n[Open Planning Sheet]({choice['Link']})"
-                st.success(msg)
-
-with tab1:
-    render_tab("Vacation", "Season", "Vibe")
-with tab2:
-    render_tab("Gaming", "Genre", "Mode")
-with tab3:
-    render_tab("Date Night", "Type", "Vibe")
-with tab4:
-    render_tab("Challenge", "Effort", "Cost")
-with tab5:
-    render_tab("Movies", "Genre", "Type")
-with tab6:
-    render_tab("Projects", "Effort", "Cost")
+                choice = subset.sample(1).iloc
