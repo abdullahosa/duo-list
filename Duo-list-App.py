@@ -7,7 +7,7 @@ import json
 JSONBIN_KEY = st.secrets["JSONBIN_KEY"]
 BIN_ID = st.secrets["BIN_ID"]
 BASE_URL = f"https://api.jsonbin.io/v3/b/{BIN_ID}"
-SHEET_WEBHOOK_URL = st.secrets["https://script.google.com/macros/s/AKfycbyKQI6l-VBdKSepFlocQ_U39WP5-Z63bWhjp51wPWGzS0pSiXtVnhEyyHiQOvj0e-Y/exec"] 
+SHEET_WEBHOOK_URL = st.secrets["SHEET_WEBHOOK_URL"] 
 
 def create_google_sheet_tab(tab_name):
     """Sends a signal to the Google Sheet to create a tab itself."""
@@ -205,6 +205,7 @@ with tab5:
     render_tab("Movies", "Genre", "Length")
 with tab6:
     render_tab("Projects", "Effort", "Cost")
+
 
 
 
