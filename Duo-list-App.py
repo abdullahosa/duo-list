@@ -103,7 +103,7 @@ with st.sidebar:
         f2_opts = ["Relaxing", "Adventure", "City", "Nature"]
     elif new_cat == "Movies":
         f1_label, f2_label = "Genre", "Type"
-        f1_opts = ["Action", "Comedy", "Drama", "Horror", "Sci-Fi", "Fantasy"]
+        f1_opts = ["Action", "Comedy", "Drama", "Horror", "Sci-Fi", "Fantasy", "Animation", "Anime"]
         f2_opts = ["Movies", "Shorts", "Shows"]
     elif new_cat == "Gaming":
         f1_label, f2_label = "Genre", "Mode"
@@ -242,3 +242,4 @@ with tab5:
     render_tab("Movies", "Genre", "Type")
 with tab6:
     render_tab("Projects", "Effort", "Cost")
+
