@@ -7,6 +7,27 @@ import json
 JSONBIN_KEY = st.secrets["JSONBIN_KEY"]
 BIN_ID = st.secrets["BIN_ID"]
 BASE_URL = f"https://api.jsonbin.io/v3/b/{BIN_ID}"
+SHEET_WEBHOOK_URL = st.secrets["https://script.google.com/macros/s/AKfycbyKQI6l-VBdKSepFlocQ_U39WP5-Z63bWhjp51wPWGzS0pSiXtVnhEyyHiQOvj0e-Y/exec"] 
+
+def create_google_sheet_tab(tab_name):
+    """Sends a signal to the Google Sheet to create a tab itself."""
+    try:
+        payload = {"tabName": tab_name}
+        
+        response = requests.post(SHEET_WEBHOOK_URL, json=payload)
+        
+        if response.status_code == 200:
+            data = response.json()
+            new_link = data.get("url", "")
+            st.toast(f"Tab created! {tab_name}", icon="✅")
+            return new_link
+        else:
+            st.error(f"Sheet Error: {response.text}")
+            return ""
+            
+    except Exception as e:
+        st.error(f"Connection Error: {e}")
+        return ""
 
 # --- FUNCTIONS ---
 def load_data():
@@ -28,7 +49,7 @@ def load_data():
         df = pd.DataFrame(records)
         
         # FORCE columns to exist
-        expected_cols = ["Category", "Activity", "Filter_1", "Filter_2", "Status"]
+        expected_cols = ["Category", "Activity", "Type", "Vibe", "Status"]
         for col in expected_cols:
             if col not in df.columns:
                 df[col] = "" 
@@ -41,7 +62,7 @@ def load_data():
 
     except Exception as e:
         st.error(f"Error loading data: {e}")
-        return pd.DataFrame(columns=["Category", "Activity", "Filter_1", "Filter_2", "Status"])
+        return pd.DataFrame(columns=["Category", "Activity", "Type", "Vibe", "Status"])
 
 def save_data(df):
     headers = {
@@ -62,13 +83,13 @@ def save_data(df):
         return False
 
 # --- APP LAYOUT ---
-st.set_page_config(page_title="Our Activity Board", page_icon="🎯", layout="wide")
+st.set_page_config(page_title="A&A Activity Board", page_icon="🎯", layout="wide")
 st.title("🎯 What should we do today?")
 
 # Sidebar: Add New Items
 with st.sidebar:
     st.header("Add New Activity")
-    new_cat = st.selectbox("Category", ["Vacation", "Gaming", "Date Night", "Challenge", "Movies"])
+    new_cat = st.selectbox("Category", ["Vacation", "Gaming", "Date Night", "Challenge", "Movies", "Projects"])
     new_act = st.text_input("Activity Name")
     
     if new_cat == "Vacation":
@@ -76,13 +97,17 @@ with st.sidebar:
         f1_opts = ["Summer", "Winter", "Spring", "Fall", "Any"]
         f2_opts = ["Relaxing", "Adventure", "City", "Nature"]
     elif new_cat == "Movies":
-        f1_label, f2_label = "Genre", "Length"
-        f1_opts = ["Action", "Comedy", "Drama", "Horror", "Sci-Fi"]
-        f2_opts = ["Short", "Feature", "Series"]
+        f1_label, f2_label = "Genre", "Type"
+        f1_opts = ["Action", "Comedy", "Drama", "Horror", "Sci-Fi", "Fantasy"]
+        f2_opts = ["Movies", "Shorts", "Shows"]
     elif new_cat == "Gaming":
         f1_label, f2_label = "Genre", "Mode"
-        f1_opts = ["RPG", "FPS", "Puzzle", "Sim"]
+        f1_opts = ["RPG", "Story", "Puzzle", "Sim"]
         f2_opts = ["Co-op", "Single", "Versus"]
+    elif new_cat == "Date Night":
+        f1_label, f2_label = "Type", "Vibe"
+        f1_label = ["Stay In", "Going Out",]
+        f2_lable = ["lazy", "Bougie", "Active", "Foodie", "Explorer"]
     else: 
         f1_label, f2_label = "Effort", "Cost"
         f1_opts = ["Low", "Medium", "High"]
@@ -94,7 +119,7 @@ with st.sidebar:
     if st.button("Add to List"):
         if new_act:
             df = load_data()
-            new_row = {"Category": new_cat, "Activity": new_act, "Filter_1": new_f1, "Filter_2": new_f2, "Status": "To Do"}
+            new_row = {"Category": new_cat, "Activity": new_act, "Type": new_f1, "Vibe": new_f2, "Status": "To Do"}
             df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
             if save_data(df):
                 st.success(f"Added {new_act}!")
@@ -104,10 +129,16 @@ with st.sidebar:
 df = load_data()
 
 # 1. VIEW TOGGLE
-view_option = st.radio("View:", ["Active List", "Completed History"], horizontal=True)
-target_status = "To Do" if view_option == "Active List" else "Completed"
+view_option = st.radio("View:", ["Active List", "Completed History", "In Porgress"], horizontal=True)
+#target_status = "To Do" if view_option == "Active List" else "Completed"
+if view_option == "Active List":
+    target_status = "To Do"
+elif view_option == "In Progress":
+    target_status = "In Progress"
+else:
+    target_status = "Completed"
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["✈️ Vacations", "🎮 Gaming", "🍷 Date Nights", "🏆 Challenges", "🎬 Movies"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["✈️ Vacations", "🎮 Gaming", "🍷 Date Nights", "🏆 Challenges", "🎬 Movies", "🛠️ Projects"])
 
 def render_tab(category_name, filter1_name, filter2_name):
     # Filter by Category AND by Status (To Do vs Completed)
@@ -123,42 +154,35 @@ def render_tab(category_name, filter1_name, filter2_name):
     # Filters
     col1, col2 = st.columns(2)
     with col1:
-        f1_val = st.multiselect(f"Filter by {filter1_name}", options=subset["Filter_1"].unique())
+        f1_val = st.multiselect(f"Filter by {filter1_name}", options=subset["Type"].unique())
     with col2:
-        f2_val = st.multiselect(f"Filter by {filter2_name}", options=subset["Filter_2"].unique())
+        f2_val = st.multiselect(f"Filter by {filter2_name}", options=subset["Vibe"].unique())
 
     if f1_val:
-        subset = subset[subset["Filter_1"].isin(f1_val)]
+        subset = subset[subset["Type"].isin(f1_val)]
     if f2_val:
-        subset = subset[subset["Filter_2"].isin(f2_val)]
+        subset = subset[subset["Vibe"].isin(f2_val)]
 
-    # 2. EDITABLE DATA FRAME
-    # This allows you to change "Status" directly in the table
     edited_df = st.data_editor(
         subset,
         column_config={
             "Status": st.column_config.SelectboxColumn(
                 "Status",
-                options=["To Do", "Completed"],
+                options=["To Do", "Completed", "In Progress"],
                 required=True,
             )
         },
-        disabled=["Category", "Activity", "Filter_1", "Filter_2"], # Prevent editing these, only Status
+        #disabled=["Category", "Activity", "Filter_1", "Filter_2"], 
         hide_index=True,
         use_container_width=True,
-        key=f"editor_{category_name}_{target_status}" # Unique key for each tab
+        key=f"editor_{category_name}_{target_status}" 
     )
 
-    # 3. SAVE LOGIC
-    # If the user changed something in the editor, edited_df will differ from subset
     if not subset.equals(edited_df):
-        # Update the master dataframe 'df' with the changes from 'edited_df'
-        # We use the index to map the changes back to the original rows
         df.update(edited_df)
         
-        # Save to Cloud
         if save_data(df):
-            st.toast("Updated!", icon="✅")
+            st.toast("Saved!", icon="✅")
             st.rerun()
 
     # Random Picker (Only show on Active list)
@@ -167,7 +191,7 @@ def render_tab(category_name, filter1_name, filter2_name):
             if not subset.empty:
                 choice = subset.sample(1).iloc[0]
                 st.balloons()
-                st.success(f"**You should do:** {choice['Activity']} ({choice['Filter_1']})")
+                st.success(f"**You should do:** {choice['Activity']} ({choice['Type']})")
 
 with tab1:
     render_tab("Vacation", "Season", "Vibe")
@@ -179,3 +203,5 @@ with tab4:
     render_tab("Challenge", "Effort", "Cost")
 with tab5:
     render_tab("Movies", "Genre", "Length")
+with tab6:
+    render_tab("Projects", "Effort", "Cost")
