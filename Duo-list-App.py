@@ -157,7 +157,7 @@ elif view_option == "In Progress":
 else:
     target_status = "Completed"
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["✈️ Vacations", "🎮 Gaming", "🍷 Date Nights", "🏆 Challenges", "🎬 Movies", "🛠️ Projects"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["✈️ Vacations", "🎮 Gaming", "✨ Date Nights", "🏆 Challenges", "🎬 Movies", "🛠️ Projects"])
 
 def render_tab(category_name, filter1_name, filter2_name):
     # Filter by Category AND by Status
@@ -242,4 +242,5 @@ with tab5:
     render_tab("Movies", "Genre", "Type")
 with tab6:
     render_tab("Projects", "Effort", "Cost")
+
 
